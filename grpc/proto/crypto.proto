@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/gabrielfvale/klever-grpc/grpc/proto;proto";
+
+service CryptoService { 
+  rpc Upvote(VoteRequest) returns (VoteResponse) {}
+  rpc Downvote(VoteRequest) returns (VoteResponse) {}
+
+  rpc CreateCrypto(CreateReq) returns (CreateRes) {}
+  rpc ReadCrypto(ReadReq) returns (ReadRes) {}
+  rpc UpdateCrypto(UpdateReq) returns (UpdateRes) {}
+  rpc DeleteCrypto(DeleteReq) returns (DeleteRes) {}
+  rpc ListCrypto(Empty) returns (stream Crypto) {}
+}
+
+message Crypto {
+  int32 id = 1;
+  string name = 2;
+  string symbol = 3;
+  int32 upvotes = 4;
+  int32 downvotes = 5;
+}
+
+message VoteRequest {
+  int32 user_id = 1;
+  string symbol = 2;
+}
+
+message VoteResponse {
+  string name = 1;
+  string symbol = 2;
+  int32 votes = 3;
+}
+
+message Empty {}
+
+message CreateReq {
+  Crypto crypto = 1;
+}
+
+message CreateRes {
+  Crypto crypto = 1;
+}
+
+message ReadReq {
+  oneof query {
+    int32 id = 1;
+    string symbol = 2;
+  }
+}
+
+message ReadRes {
+  Crypto crypto = 1;
+}
+
+message UpdateReq {
+  Crypto crypto = 1;
+}
+
+message UpdateRes {
+  Crypto crypto = 1;
+}
+
+message DeleteReq {
+  oneof query {
+    int32 id = 1;
+    string symbol = 2;
+  }
+}
+
+message DeleteRes {
+  bool ok = 1;
+}
