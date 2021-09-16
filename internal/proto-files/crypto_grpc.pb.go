@@ -341,5 +341,5 @@ var CryptoService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "grpc/proto/crypto.proto",
+	Metadata: "internal/proto-files/crypto.proto",
 }

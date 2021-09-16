@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	pb "github.com/gabrielfvale/klever-grpc/grpc/proto"
+	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 )
