@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	impl "github.com/gabrielfvale/klever-grpc/internal/grpc/impl"
 	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -16,10 +17,6 @@ var (
 	mongoCtx context.Context
 )
 
-type CryptoServiceServer struct {
-	*pb.UnimplementedCryptoServiceServer
-}
-
 func main() {
 	lis, err := net.Listen("tcp", "localhost:50051")
 	if err != nil {
@@ -27,7 +24,8 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterCryptoServiceServer(s, &CryptoServiceServer{})
+	serviceServer := impl.NewCryptoServiceServer()
+	pb.RegisterCryptoServiceServer(s, serviceServer)
 	log.Printf("Listening on %v", lis.Addr())
 
 	if err := s.Serve(lis); err != nil {
