@@ -23,12 +23,12 @@ func main() {
 		log.Fatalf("Could not listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	server := grpc.NewServer()
 	serviceServer := impl.NewCryptoServiceServer()
-	pb.RegisterCryptoServiceServer(s, serviceServer)
+	pb.RegisterCryptoServiceServer(server, serviceServer)
 	log.Printf("Listening on %v", lis.Addr())
 
-	if err := s.Serve(lis); err != nil {
+	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Could not serve: %v", err)
 	}
 }
