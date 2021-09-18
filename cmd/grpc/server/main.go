@@ -7,8 +7,11 @@ import (
 	impl "github.com/gabrielfvale/klever-grpc/internal/grpc/impl"
 	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
 	"github.com/gabrielfvale/klever-grpc/pkg"
+	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 )
+
+var mongoClient *mongo.Client
 
 func main() {
 	// Initialize .env
@@ -18,7 +21,7 @@ func main() {
 	}
 
 	// Connect to MongoDB
-	_, err = pkg.InitMongoClient(pkg.GetEnvVar("MONGO_URI"))
+	mongoClient, err = pkg.GetMongoClient()
 	if err != nil {
 		log.Fatalf("Could not initialize Mongo client: %v", err)
 	}

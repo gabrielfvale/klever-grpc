@@ -5,7 +5,20 @@ import (
 	"log"
 
 	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
+	"github.com/gabrielfvale/klever-grpc/pkg"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+// CryptoTyp4 represents the bson readable data from the protobuf
+type CryptoType struct {
+	Id        primitive.ObjectID `bson:"_id,omitempty"`
+	Name      string             `bson:"name"`
+	Symbol    string             `bson:"symbol"`
+	Upvotes   int32              `bson:"upvotes"`
+	Downvotes int32              `bson:"downvotes"`
+}
 
 // CryptoServiceServer is a implementation of CryptoService provided by gRPC
 type CryptoServiceServer struct {
@@ -35,7 +48,29 @@ func (s *CryptoServiceServer) Downvote(ctx context.Context, in *pb.VoteRequest) 
 // CreateRes if successful.
 func (s *CryptoServiceServer) CreateCrypto(ctx context.Context, in *pb.CreateReq) (*pb.CreateRes, error) {
 	log.Printf("Received Create request for %v", in.Crypto.GetSymbol())
-	return &pb.CreateRes{}, nil
+	crypto := in.GetCrypto()
+
+	item := CryptoType{
+		Name:      crypto.GetName(),
+		Symbol:    crypto.GetSymbol(),
+		Upvotes:   crypto.GetUpvotes(),
+		Downvotes: crypto.GetDownvotes(),
+	}
+
+	collection, err := pkg.GetMongoCollection()
+	// Insert crypto item
+	res, err := collection.InsertOne(context.TODO(), item)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error on InsertOne: %v", err)
+	}
+	// Print inserted id
+	oid, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Could not convert Id to oid")
+	}
+	log.Printf("Inserted Crypto of ID %s", oid.Hex())
+
+	return &pb.CreateRes{Crypto: crypto}, nil
 }
 
 // ReadCrypto takes a ReadReq and reads a Crypto from the database, returning
