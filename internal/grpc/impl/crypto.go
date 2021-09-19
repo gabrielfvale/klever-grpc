@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
 	"github.com/gabrielfvale/klever-grpc/pkg"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,8 +15,8 @@ import (
 // CryptoTyp4 represents the bson readable data from the protobuf
 type CryptoType struct {
 	Id        primitive.ObjectID `bson:"_id,omitempty"`
-	Name      string             `bson:"name"`
 	Symbol    string             `bson:"symbol"`
+	Name      string             `bson:"name"`
 	Upvotes   int32              `bson:"upvotes"`
 	Downvotes int32              `bson:"downvotes"`
 }
@@ -76,8 +77,31 @@ func (s *CryptoServiceServer) CreateCrypto(ctx context.Context, in *pb.CreateReq
 // ReadCrypto takes a ReadReq and reads a Crypto from the database, returning
 // ReadRes if successful.
 func (s *CryptoServiceServer) ReadCrypto(ctx context.Context, in *pb.ReadReq) (*pb.ReadRes, error) {
-	log.Printf("Received Read request for %v", in.GetQuery())
-	return &pb.ReadRes{}, nil
+	log.Printf("Received Read request for %v", in.GetSymbol())
+	item := CryptoType{}
+
+	collection, err := pkg.GetMongoCollection()
+	if err != nil {
+		return &pb.ReadRes{}, err
+	}
+	res := collection.FindOne(context.TODO(), bson.M{"symbol": "BTC"})
+	if err := res.Decode(&item); err != nil {
+		return nil, status.Error(codes.NotFound, "Could not find Object")
+	}
+
+	log.Printf("Read name: %s", item.Name)
+
+	response := &pb.ReadRes{
+		Crypto: &pb.Crypto{
+			Id:        item.Id.Hex(),
+			Name:      item.Name,
+			Symbol:    item.Symbol,
+			Upvotes:   item.Upvotes,
+			Downvotes: item.Downvotes,
+		},
+	}
+
+	return response, nil
 }
 
 // UpdateCrypto takes a UpdateReq and updates a Crypto on the database,
@@ -90,7 +114,7 @@ func (s *CryptoServiceServer) UpdateCrypto(ctx context.Context, in *pb.UpdateReq
 // DeleteCrypto takes a DeleteReq and deletes a Crypto on the database,
 // returning DeleteRes if successful.
 func (s *CryptoServiceServer) DeleteCrypto(ctx context.Context, in *pb.DeleteReq) (*pb.DeleteRes, error) {
-	log.Printf("Received Delete request for %v", in.GetQuery())
+	log.Printf("Received Delete request for %v", in.GetSymbol())
 	return &pb.DeleteRes{}, nil
 }
 
@@ -99,8 +123,8 @@ func (s *CryptoServiceServer) ListCrypto(in *pb.Empty, stream pb.CryptoService_L
 	log.Print("Received List request")
 	// Test array to stream Crypto
 	var testCryptos []*pb.Crypto
-	testCryptos = append(testCryptos, &pb.Crypto{Id: 1, Name: "Bitcoin", Symbol: "BTC"})
-	testCryptos = append(testCryptos, &pb.Crypto{Id: 2, Name: "Tether", Symbol: "USDT"})
+	testCryptos = append(testCryptos, &pb.Crypto{Name: "Bitcoin", Symbol: "BTC"})
+	testCryptos = append(testCryptos, &pb.Crypto{Name: "Tether", Symbol: "USDT"})
 	for _, crypto := range testCryptos {
 		if err := stream.Send(crypto); err != nil {
 			return err

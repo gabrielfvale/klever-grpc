@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 
@@ -25,6 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not initialize Mongo client: %v", err)
 	}
+	defer mongoClient.Disconnect(context.TODO())
 
 	// Create listen socket
 	lis, err := net.Listen("tcp", "localhost:50051")

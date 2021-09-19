@@ -30,10 +30,10 @@ func main() {
 	// Test the endpoints
 	_, err = client.Upvote(ctx, &pb.VoteRequest{Symbol: "BTC"})
 	_, err = client.Downvote(ctx, &pb.VoteRequest{Symbol: "BTC"})
-	_, err = client.CreateCrypto(ctx, &pb.CreateReq{Crypto: &pb.Crypto{Id: 1, Name: "Bitcoin", Symbol: "BTC"}})
-	_, err = client.ReadCrypto(ctx, &pb.ReadReq{Query: &pb.ReadReq_Id{Id: 1}})
-	_, err = client.UpdateCrypto(ctx, &pb.UpdateReq{Crypto: &pb.Crypto{Id: 1, Name: "Bitcoin", Symbol: "BTC"}})
-	_, err = client.DeleteCrypto(ctx, &pb.DeleteReq{Query: &pb.DeleteReq_Id{Id: 1}})
+	_, err = client.CreateCrypto(ctx, &pb.CreateReq{Crypto: &pb.Crypto{Name: "Bitcoin", Symbol: "BTC"}})
+	_, err = client.ReadCrypto(ctx, &pb.ReadReq{Symbol: "BTC"})
+	_, err = client.UpdateCrypto(ctx, &pb.UpdateReq{Crypto: &pb.Crypto{Name: "Bitcoin", Symbol: "BTC"}})
+	_, err = client.DeleteCrypto(ctx, &pb.DeleteReq{Symbol: "BTC"})
 
 	stream, err := client.ListCrypto(ctx, &pb.Empty{})
 	for {
