@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
-	"io"
 	"log"
 	"time"
 
+	cli "github.com/gabrielfvale/klever-grpc/cmd/cobra"
 	pb "github.com/gabrielfvale/klever-grpc/internal/proto"
 	"google.golang.org/grpc"
+)
+
+var (
+	client pb.CryptoServiceClient
+	ctx    context.Context
 )
 
 const (
@@ -15,39 +20,20 @@ const (
 )
 
 func main() {
+	log.Printf("Starting Crypto client")
+
 	// Set up a connection to the gRPC server (insecure and blocking)
 	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("Could not dial: %v", err)
 	}
 	defer conn.Close()
+	client = pb.NewCryptoServiceClient(conn)
 
-	// Create the client and context
-	client := pb.NewCryptoServiceClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	// Create timeout context
+	_, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	// Test the endpoints
-	_, err = client.CreateCrypto(ctx, &pb.CreateReq{Crypto: &pb.Crypto{Name: "Tether", Symbol: "USDT"}})
-	_, err = client.Upvote(ctx, &pb.VoteRequest{Symbol: "USDT"})
-	// _, err = client.Downvote(ctx, &pb.VoteRequest{Symbol: "BTC"})
-	// _, err = client.ReadCrypto(ctx, &pb.ReadReq{Symbol: "BTC"})
-	// _, err = client.UpdateCrypto(ctx, &pb.UpdateReq{Crypto: &pb.Crypto{Name: "Bitcoin", Symbol: "BTC", Upvotes: 2}})
-	// _, err = client.DeleteCrypto(ctx, &pb.DeleteReq{Symbol: "BTC"})
-
-	stream, err := client.ListCrypto(ctx, &pb.Empty{})
-	for {
-		res, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("%v.ListCrypto(_) = _, %v", client, err)
-		}
-		log.Println(res.Symbol)
-	}
-
-	if err != nil {
-		log.Fatalf("could not upvote: %v", err)
-	}
+	// Execute cobra CLI
+	cli.Execute()
 }
