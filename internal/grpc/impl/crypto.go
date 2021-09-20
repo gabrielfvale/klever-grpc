@@ -51,14 +51,24 @@ func (s *CryptoServiceServer) CreateCrypto(ctx context.Context, in *pb.CreateReq
 	log.Printf("Received Create request for %v", in.Crypto.GetSymbol())
 	crypto := in.GetCrypto()
 
+	// Check if crypto of "symbol" aready exists
+	read, err := s.ReadCrypto(context.TODO(), &pb.ReadReq{Symbol: crypto.GetSymbol()})
+	if err == nil && read.Crypto.GetSymbol() == crypto.GetSymbol() {
+		return nil, status.Errorf(codes.AlreadyExists, "Crypto of symbol %s already exists", crypto.GetSymbol())
+	}
+
 	item := CryptoType{
-		Name:      crypto.GetName(),
 		Symbol:    crypto.GetSymbol(),
+		Name:      crypto.GetName(),
 		Upvotes:   crypto.GetUpvotes(),
 		Downvotes: crypto.GetDownvotes(),
 	}
-
+	// Load collection
 	collection, err := pkg.GetMongoCollection()
+	if err != nil {
+		return nil, err
+	}
+
 	// Insert crypto item
 	res, err := collection.InsertOne(context.TODO(), item)
 	if err != nil {
@@ -80,22 +90,25 @@ func (s *CryptoServiceServer) ReadCrypto(ctx context.Context, in *pb.ReadReq) (*
 	log.Printf("Received Read request for %v", in.GetSymbol())
 	item := CryptoType{}
 
+	// Load collection
 	collection, err := pkg.GetMongoCollection()
 	if err != nil {
-		return &pb.ReadRes{}, err
+		return nil, err
 	}
-	res := collection.FindOne(context.TODO(), bson.M{"symbol": "BTC"})
+
+	// Read crypto of a given symbol
+	res := collection.FindOne(context.TODO(), bson.M{"symbol": in.GetSymbol()})
 	if err := res.Decode(&item); err != nil {
 		return nil, status.Error(codes.NotFound, "Could not find Object")
 	}
 
-	log.Printf("Read name: %s", item.Name)
+	log.Printf("Read crypto %s", item.Name)
 
 	response := &pb.ReadRes{
 		Crypto: &pb.Crypto{
 			Id:        item.Id.Hex(),
-			Name:      item.Name,
 			Symbol:    item.Symbol,
+			Name:      item.Name,
 			Upvotes:   item.Upvotes,
 			Downvotes: item.Downvotes,
 		},
@@ -115,20 +128,55 @@ func (s *CryptoServiceServer) UpdateCrypto(ctx context.Context, in *pb.UpdateReq
 // returning DeleteRes if successful.
 func (s *CryptoServiceServer) DeleteCrypto(ctx context.Context, in *pb.DeleteReq) (*pb.DeleteRes, error) {
 	log.Printf("Received Delete request for %v", in.GetSymbol())
-	return &pb.DeleteRes{}, nil
+
+	// Load collection
+	collection, err := pkg.GetMongoCollection()
+	if err != nil {
+		return nil, err
+	}
+	// Try to delete crypto of given symbol
+	res, err := collection.DeleteOne(context.TODO(), bson.M{"symbol": in.GetSymbol()})
+	if err != nil {
+		return nil, err
+	}
+
+	if res.DeletedCount == 0 {
+		return &pb.DeleteRes{Ok: false}, status.Errorf(codes.Internal, "Cannot delete Crypto: %v")
+	}
+
+	return &pb.DeleteRes{Ok: true}, nil
 }
 
 // ListCrypto takes an Empty request, returning a stream of Crypto
 func (s *CryptoServiceServer) ListCrypto(in *pb.Empty, stream pb.CryptoService_ListCryptoServer) error {
 	log.Print("Received List request")
-	// Test array to stream Crypto
-	var testCryptos []*pb.Crypto
-	testCryptos = append(testCryptos, &pb.Crypto{Name: "Bitcoin", Symbol: "BTC"})
-	testCryptos = append(testCryptos, &pb.Crypto{Name: "Tether", Symbol: "USDT"})
-	for _, crypto := range testCryptos {
-		if err := stream.Send(crypto); err != nil {
-			return err
+	// Load collection
+	collection, err := pkg.GetMongoCollection()
+	if err != nil {
+		return err
+	}
+	// Create Mongo cursor
+	cursor, err := collection.Find(context.TODO(), bson.D{})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Error: %v", err)
+	}
+	defer cursor.Close(context.TODO())
+	// Iterate over cursor entries
+	for cursor.Next(context.TODO()) {
+		item := &CryptoType{}
+		if err := cursor.Decode(item); err != nil {
+			return status.Errorf(codes.Internal, "Could not decode data: %v", err)
 		}
+		stream.Send(&pb.Crypto{
+			Symbol:    item.Symbol,
+			Name:      item.Name,
+			Upvotes:   item.Upvotes,
+			Downvotes: item.Downvotes,
+		})
+	}
+	// Check for cursor errors
+	if err = cursor.Err(); err != nil {
+		return status.Errorf(codes.Internal, "Error: %v", err)
 	}
 	return nil
 }
