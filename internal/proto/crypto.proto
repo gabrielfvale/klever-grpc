@@ -13,6 +13,7 @@ service CryptoService {
   rpc UpdateCrypto(UpdateReq) returns (UpdateRes) {}
   rpc DeleteCrypto(DeleteReq) returns (DeleteRes) {}
   rpc ListCrypto(Empty) returns (stream Crypto) {}
+  rpc Subscribe(ReadReq) returns (stream Crypto) {}
 }
 
 message Crypto {

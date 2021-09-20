@@ -8,6 +8,8 @@ import (
 	"github.com/gabrielfvale/klever-grpc/pkg"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,6 +21,12 @@ type CryptoType struct {
 	Name      string             `bson:"name"`
 	Upvotes   int32              `bson:"upvotes"`
 	Downvotes int32              `bson:"downvotes"`
+}
+
+// ChangeEvent represents a fraction of the change stream event returned by
+// collection.Watch()
+type ChangeEvent struct {
+	FullDocument CryptoType `bson:"fullDocument"`
 }
 
 // CryptoServiceServer is a implementation of CryptoService provided by gRPC
@@ -266,6 +274,48 @@ func (s *CryptoServiceServer) ListCrypto(in *pb.Empty, stream pb.CryptoService_L
 	// Check for cursor errors
 	if err = cursor.Err(); err != nil {
 		return status.Errorf(codes.Internal, "Error: %v", err)
+	}
+	return nil
+}
+
+// Subscribe creates a real time stream that waits for changes in the database
+// with a given symbol filter.
+func (s *CryptoServiceServer) Subscribe(in *pb.ReadReq, stream pb.CryptoService_SubscribeServer) error {
+	log.Printf("Received Subscribe request for %v", in.GetSymbol())
+
+	// Load collection
+	collection, err := pkg.GetMongoCollection()
+	if err != nil {
+		return err
+	}
+
+	// Set pipeline filter
+	pipeline := mongo.Pipeline{
+		bson.D{{
+			Key:   "$match",
+			Value: bson.D{{Key: "fullDocument.symbol", Value: in.GetSymbol()}}},
+		},
+	}
+	streamOptions := options.ChangeStream().SetFullDocument(options.UpdateLookup)
+
+	// Create a change stream
+	mstream, err := collection.Watch(context.TODO(), pipeline, streamOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Wait for events and stream to client
+	var event ChangeEvent
+	for mstream.Next(context.TODO()) {
+		if err := mstream.Decode(&event); err != nil {
+			log.Fatalf("Error decoding: %v", err)
+		}
+		crypto := event.FullDocument
+		stream.Send(&pb.Crypto{
+			Symbol:    crypto.Symbol,
+			Name:      crypto.Name,
+			Upvotes:   crypto.Upvotes,
+			Downvotes: crypto.Downvotes,
+		})
 	}
 	return nil
 }

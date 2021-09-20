@@ -25,6 +25,7 @@ type CryptoServiceClient interface {
 	UpdateCrypto(ctx context.Context, in *UpdateReq, opts ...grpc.CallOption) (*UpdateRes, error)
 	DeleteCrypto(ctx context.Context, in *DeleteReq, opts ...grpc.CallOption) (*DeleteRes, error)
 	ListCrypto(ctx context.Context, in *Empty, opts ...grpc.CallOption) (CryptoService_ListCryptoClient, error)
+	Subscribe(ctx context.Context, in *ReadReq, opts ...grpc.CallOption) (CryptoService_SubscribeClient, error)
 }
 
 type cryptoServiceClient struct {
@@ -121,6 +122,38 @@ func (x *cryptoServiceListCryptoClient) Recv() (*Crypto, error) {
 	return m, nil
 }
 
+func (c *cryptoServiceClient) Subscribe(ctx context.Context, in *ReadReq, opts ...grpc.CallOption) (CryptoService_SubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CryptoService_ServiceDesc.Streams[1], "/proto.CryptoService/Subscribe", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &cryptoServiceSubscribeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type CryptoService_SubscribeClient interface {
+	Recv() (*Crypto, error)
+	grpc.ClientStream
+}
+
+type cryptoServiceSubscribeClient struct {
+	grpc.ClientStream
+}
+
+func (x *cryptoServiceSubscribeClient) Recv() (*Crypto, error) {
+	m := new(Crypto)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // CryptoServiceServer is the server API for CryptoService service.
 // All implementations must embed UnimplementedCryptoServiceServer
 // for forward compatibility
@@ -132,6 +165,7 @@ type CryptoServiceServer interface {
 	UpdateCrypto(context.Context, *UpdateReq) (*UpdateRes, error)
 	DeleteCrypto(context.Context, *DeleteReq) (*DeleteRes, error)
 	ListCrypto(*Empty, CryptoService_ListCryptoServer) error
+	Subscribe(*ReadReq, CryptoService_SubscribeServer) error
 	mustEmbedUnimplementedCryptoServiceServer()
 }
 
@@ -159,6 +193,9 @@ func (UnimplementedCryptoServiceServer) DeleteCrypto(context.Context, *DeleteReq
 }
 func (UnimplementedCryptoServiceServer) ListCrypto(*Empty, CryptoService_ListCryptoServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListCrypto not implemented")
+}
+func (UnimplementedCryptoServiceServer) Subscribe(*ReadReq, CryptoService_SubscribeServer) error {
+	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
 func (UnimplementedCryptoServiceServer) mustEmbedUnimplementedCryptoServiceServer() {}
 
@@ -302,6 +339,27 @@ func (x *cryptoServiceListCryptoServer) Send(m *Crypto) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _CryptoService_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ReadReq)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CryptoServiceServer).Subscribe(m, &cryptoServiceSubscribeServer{stream})
+}
+
+type CryptoService_SubscribeServer interface {
+	Send(*Crypto) error
+	grpc.ServerStream
+}
+
+type cryptoServiceSubscribeServer struct {
+	grpc.ServerStream
+}
+
+func (x *cryptoServiceSubscribeServer) Send(m *Crypto) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // CryptoService_ServiceDesc is the grpc.ServiceDesc for CryptoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -340,6 +398,11 @@ var CryptoService_ServiceDesc = grpc.ServiceDesc{
 			Handler:       _CryptoService_ListCrypto_Handler,
 			ServerStreams: true,
 		},
+		{
+			StreamName:    "Subscribe",
+			Handler:       _CryptoService_Subscribe_Handler,
+			ServerStreams: true,
+		},
 	},
-	Metadata: "internal/proto-files/crypto.proto",
+	Metadata: "internal/proto/crypto.proto",
 }
