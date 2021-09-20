@@ -1,5 +1,8 @@
 # Environment variables
 .env
+# Docker
+mongo/data
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

@@ -14,9 +14,10 @@ func init() {
 
 // upvoteCmd represents the command to upvote a certain cryptocurrency
 var upvoteCmd = &cobra.Command{
-	Use:   "upvote",
-	Short: "Upvote a cryptocurrency",
-	Args:  cobra.ExactArgs(1),
+	Use:     "upvote",
+	Aliases: []string{"up"},
+	Short:   "Upvote a cryptocurrency",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Create request
 		req := &pb.VoteRequest{Symbol: args[0]}
