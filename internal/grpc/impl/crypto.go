@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
+	pb "github.com/gabrielfvale/klever-grpc/internal/proto"
 	"github.com/gabrielfvale/klever-grpc/pkg"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// CryptoTyp4 represents the bson readable data from the protobuf
+// CryptoType represents the bson readable data from the protobuf
 type CryptoType struct {
 	Id        primitive.ObjectID `bson:"_id,omitempty"`
 	Symbol    string             `bson:"symbol"`

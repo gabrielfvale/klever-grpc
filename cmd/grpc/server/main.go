@@ -6,7 +6,7 @@ import (
 	"net"
 
 	impl "github.com/gabrielfvale/klever-grpc/internal/grpc/impl"
-	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
+	pb "github.com/gabrielfvale/klever-grpc/internal/proto"
 	"github.com/gabrielfvale/klever-grpc/pkg"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"

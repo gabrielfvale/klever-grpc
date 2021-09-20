@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/gabrielfvale/klever-grpc/internal/proto-files"
+	pb "github.com/gabrielfvale/klever-grpc/internal/proto"
 	"google.golang.org/grpc"
 )
 
