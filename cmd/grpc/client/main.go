@@ -10,11 +10,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	client pb.CryptoServiceClient
-	ctx    context.Context
-)
-
 const (
 	address = "localhost:50051"
 )
@@ -28,12 +23,13 @@ func main() {
 		log.Fatalf("Could not dial: %v", err)
 	}
 	defer conn.Close()
-	client = pb.NewCryptoServiceClient(conn)
+	client := pb.NewCryptoServiceClient(conn)
 
 	// Create timeout context
 	_, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	// Execute cobra CLI
+	cli.SetClient(&client)
 	cli.Execute()
 }

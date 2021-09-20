@@ -173,7 +173,7 @@ func (s *CryptoServiceServer) ReadCrypto(ctx context.Context, in *pb.ReadReq) (*
 func (s *CryptoServiceServer) UpdateCrypto(ctx context.Context, in *pb.UpdateReq) (*pb.UpdateRes, error) {
 	log.Printf("Received Update request for %v", in.Crypto.GetSymbol())
 	crypto := in.GetCrypto()
-	readCrypto := CryptoType{}
+	updtCrypto := CryptoType{}
 
 	// Load collection
 	collection, err := pkg.GetMongoCollection()
@@ -183,23 +183,34 @@ func (s *CryptoServiceServer) UpdateCrypto(ctx context.Context, in *pb.UpdateReq
 
 	// Read crypto of a given symbol
 	res := collection.FindOne(context.TODO(), bson.M{"symbol": crypto.GetSymbol()})
-	if err := res.Decode(&readCrypto); err != nil {
+	if err := res.Decode(&updtCrypto); err != nil {
 		return nil, status.Error(codes.NotFound, "Could not find Object")
 	}
 
+	// Only update if necessary
+	if crypto.Name != "" {
+		updtCrypto.Name = crypto.Name
+	}
+	if crypto.Upvotes != -1 {
+		updtCrypto.Upvotes = crypto.Upvotes
+	}
+	if crypto.Downvotes != -1 {
+		updtCrypto.Downvotes = crypto.Downvotes
+	}
+
 	// Update object
-	_, err = collection.ReplaceOne(context.TODO(), primitive.M{"_id": readCrypto.Id}, CryptoType{
-		Symbol:    crypto.Symbol,
-		Name:      crypto.Name,
-		Upvotes:   crypto.Upvotes,
-		Downvotes: crypto.Downvotes,
-	})
+	_, err = collection.ReplaceOne(context.TODO(), primitive.M{"_id": updtCrypto.Id}, updtCrypto)
 
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not update crypto: %v", err)
 	}
 
-	return &pb.UpdateRes{Crypto: crypto}, nil
+	return &pb.UpdateRes{Crypto: &pb.Crypto{
+		Symbol:    crypto.Symbol,
+		Name:      updtCrypto.Name,
+		Upvotes:   updtCrypto.Upvotes,
+		Downvotes: updtCrypto.Downvotes,
+	}}, nil
 }
 
 // DeleteCrypto takes a DeleteReq and deletes a Crypto on the database,
